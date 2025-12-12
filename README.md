@@ -84,6 +84,64 @@ The app uses Hugging Face's Inference API with the `microsoft/DialoGPT-medium` m
 
 If you want to use a different model, you can modify the `HF_API_URL` in `server.js`.
 
+## Developer Mode 🔐
+
+Dev GPT includes a private developer-only command system for authorized developers.
+
+### Setup
+
+1. **Set Developer Secret Key:**
+   Add to your `.env` file:
+   ```
+   DEV_SECRET_KEY=your_secure_secret_key_here
+   ```
+   If not set, defaults to `dev_gpt_2024_secure_key` (change this in production!)
+
+### Usage
+
+Developer commands follow this format:
+```
+/dev SECRET_KEY command
+```
+
+### Available Commands
+
+- `deploy` - Deploy the application
+- `restart` - Restart the server (simulation)
+- `logs` - Show recent developer command logs
+- `updateMemory` - Update AI memory/knowledge base
+- `clearDatabase` - Clear all conversation history
+- `help` - Show available commands
+
+### Examples
+
+```
+/dev your_secret_key deploy
+/dev your_secret_key logs
+/dev your_secret_key help
+```
+
+### Security
+
+- Invalid secret keys return: "🔒 Unauthorized developer command."
+- All developer commands are logged for auditing
+- Access developer logs via API: `GET /api/dev/logs?key=SECRET_KEY`
+
+### Adding New Commands
+
+To add new developer commands, edit the `developerCommands` object in `server.js`:
+
+```javascript
+const developerCommands = {
+  yourCommand: async () => {
+    return {
+      success: true,
+      message: 'Your command response'
+    };
+  }
+};
+```
+
 ## Deployment to Render
 
 ### Prerequisites

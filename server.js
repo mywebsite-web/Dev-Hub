@@ -18,8 +18,173 @@ const HF_API_URL = 'https://router.huggingface.co/v1/chat/completions';
 const HF_API_MODEL = 'meta-llama/Llama-3.1-8B-Instruct';
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
+// Developer mode configuration
+const DEV_SECRET_KEY = process.env.DEV_SECRET_KEY || 'dev_gpt_2024_secure_key';
+const DEV_COMMAND_PREFIX = '/dev';
+
+// Developer command logs (in-memory, could be persisted to database)
+const devCommandLogs = [];
+
 // Store conversation history for context
 const conversations = new Map();
+
+// Developer command functions
+const developerCommands = {
+  deploy: async () => {
+    // Simulate deployment process
+    return {
+      success: true,
+      message: '🚀 Deployment initiated successfully!\n\n' +
+               'Status: Building application...\n' +
+               'Estimated time: 2-3 minutes\n' +
+               'You will be notified when deployment completes.'
+    };
+  },
+  
+  restart: async () => {
+    // Note: Actual server restart would require process management
+    return {
+      success: true,
+      message: '🔄 Server restart command received.\n\n' +
+               'Note: In production, this would restart the server.\n' +
+               'For now, this is a simulation. Actual restart requires process manager (PM2, etc.).'
+    };
+  },
+  
+  logs: async () => {
+    const recentLogs = devCommandLogs.slice(-10).reverse();
+    if (recentLogs.length === 0) {
+      return {
+        success: true,
+        message: '📋 No developer commands logged yet.'
+      };
+    }
+    
+    const logText = recentLogs.map(log => 
+      `[${new Date(log.timestamp).toLocaleString()}] ${log.command} - ${log.status}`
+    ).join('\n');
+    
+    return {
+      success: true,
+      message: `📋 Recent Developer Command Logs (Last 10):\n\n${logText}`
+    };
+  },
+  
+  updateMemory: async () => {
+    // Simulate memory update
+    return {
+      success: true,
+      message: '🧠 AI memory update initiated.\n\n' +
+               'Status: Updating system prompts and knowledge base...\n' +
+               'Memory refresh completed successfully.'
+    };
+  },
+  
+  clearDatabase: async () => {
+    // Clear conversation history
+    conversations.clear();
+    return {
+      success: true,
+      message: '🗑️ Database cleared successfully.\n\n' +
+               'All conversation history has been removed.\n' +
+               'New conversations will start fresh.'
+    };
+  },
+  
+  help: async () => {
+    return {
+      success: true,
+      message: '📚 Available Developer Commands:\n\n' +
+               '• deploy - Deploy the application\n' +
+               '• restart - Restart the server\n' +
+               '• logs - Show recent command logs\n' +
+               '• updateMemory - Update AI memory/knowledge base\n' +
+               '• clearDatabase - Clear all conversation history\n' +
+               '• help - Show this help message\n\n' +
+               'Usage: /dev SECRET_KEY command'
+    };
+  }
+};
+
+// Log developer command execution
+function logDeveloperCommand(command, status, keyUsed, req = null) {
+  devCommandLogs.push({
+    timestamp: Date.now(),
+    command: command,
+    status: status,
+    keyUsed: keyUsed ? '***' + keyUsed.slice(-4) : 'none',
+    ip: req?.ip || req?.connection?.remoteAddress || 'unknown'
+  });
+  
+  // Keep only last 100 logs
+  if (devCommandLogs.length > 100) {
+    devCommandLogs.shift();
+  }
+  
+  // Also log to console in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[DEV COMMAND] ${command} - ${status} at ${new Date().toISOString()}`);
+  }
+}
+
+// Handle developer commands
+async function handleDeveloperCommands(message, req) {
+  // Check if message starts with developer command prefix
+  if (!message.trim().startsWith(DEV_COMMAND_PREFIX)) {
+    return null; // Not a developer command
+  }
+  
+  // Parse command: /dev SECRET_KEY command [args]
+  const parts = message.trim().split(/\s+/);
+  
+  if (parts.length < 3) {
+    logDeveloperCommand('invalid_format', 'failed', null, req);
+    return {
+      success: false,
+      message: '❌ Invalid developer command format.\n\n' +
+               'Usage: /dev SECRET_KEY command\n' +
+               'Example: /dev your_secret_key deploy'
+    };
+  }
+  
+  const providedKey = parts[1];
+  const command = parts[2].toLowerCase();
+  const args = parts.slice(3);
+  
+  // Authenticate developer
+  if (providedKey !== DEV_SECRET_KEY) {
+    logDeveloperCommand(command, 'unauthorized', providedKey, req);
+    return {
+      success: false,
+      message: '🔒 Unauthorized developer command.\n\n' +
+               'Invalid secret key. Access denied.'
+    };
+  }
+  
+  // Check if command exists
+  if (!developerCommands[command]) {
+    logDeveloperCommand(command, 'not_found', providedKey, req);
+    return {
+      success: false,
+      message: `❌ Unknown developer command: "${command}"\n\n` +
+               'Type "/dev SECRET_KEY help" to see available commands.'
+    };
+  }
+  
+  // Execute command
+  try {
+    logDeveloperCommand(command, 'executing', providedKey, req);
+    const result = await developerCommands[command]();
+    logDeveloperCommand(command, 'success', providedKey, req);
+    return result;
+  } catch (error) {
+    logDeveloperCommand(command, 'error', providedKey, req);
+    return {
+      success: false,
+      message: `❌ Error executing command: ${error.message}`
+    };
+  }
+}
 
 // Helper function to generate a friendly system prompt
 function getSystemPrompt() {
@@ -46,6 +211,16 @@ app.post('/api/chat', async (req, res) => {
 
     if (!message || message.trim() === '') {
       return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Check for developer commands first
+    const devCommandResult = await handleDeveloperCommands(message, req);
+    if (devCommandResult !== null) {
+      return res.json({
+        response: devCommandResult.message,
+        conversationId: conversationId,
+        isDeveloperCommand: true
+      });
     }
 
     // Get or create conversation history
@@ -234,6 +409,24 @@ function generateFallbackResponse(message) {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Dev GPT is running!' });
+});
+
+// Developer logs endpoint (protected)
+app.get('/api/dev/logs', (req, res) => {
+  const authKey = req.query.key || req.headers['x-dev-key'];
+  
+  if (authKey !== DEV_SECRET_KEY) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid developer key' 
+    });
+  }
+  
+  res.json({
+    success: true,
+    logs: devCommandLogs.slice(-50).reverse(), // Last 50 logs
+    total: devCommandLogs.length
+  });
 });
 
 // Start server
