@@ -53,30 +53,74 @@ function initializeWhatsApp() {
   return whatsappClient;
 }
 
+// Format WhatsApp number
+function formatWhatsAppNumber(number) {
+  // Remove all non-digit characters except +
+  let cleaned = number.replace(/[^\d+]/g, '');
+  
+  // Remove leading + if present
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  
+  // If number doesn't start with country code, assume it's a local number
+  // You might need to add your default country code here
+  // For now, we'll use the number as-is if it looks like it has a country code
+  
+  // Add @c.us suffix for WhatsApp Web.js
+  return cleaned + '@c.us';
+}
+
 // Send WhatsApp message
 async function sendWhatsAppMessage(recipientNumber, messageText, devKey) {
   try {
-    if (!whatsappClient || !isReady) {
+    if (!whatsappClient) {
       initializeWhatsApp();
       return {
         success: false,
-        message: '⚠️ WhatsApp client is not ready. Please wait for QR code scan and authentication.'
+        message: '⚠️ WhatsApp client is initializing. Please wait for QR code scan and authentication.'
       };
     }
 
-    // Format number (remove spaces, add country code if needed)
-    let formattedNumber = recipientNumber.replace(/\s+/g, '');
-    if (!formattedNumber.includes('@c.us')) {
-      formattedNumber = formattedNumber + '@c.us';
+    if (!isReady) {
+      return {
+        success: false,
+        message: '⚠️ WhatsApp client is not ready. Please wait for QR code scan and authentication.\n\nCheck the console for QR code to scan with WhatsApp.'
+      };
+    }
+
+    // Format number properly
+    const formattedNumber = formatWhatsAppNumber(recipientNumber);
+    
+    console.log(`📱 Attempting to send WhatsApp message to: ${formattedNumber}`);
+    console.log(`   Original number: ${recipientNumber}`);
+    console.log(`   Message: ${messageText.substring(0, 50)}...`);
+
+    // Check if number exists in WhatsApp
+    const isRegistered = await whatsappClient.isRegisteredUser(formattedNumber);
+    if (!isRegistered) {
+      return {
+        success: false,
+        message: `❌ The number ${recipientNumber} is not registered on WhatsApp.\n\nPlease verify the number is correct and includes country code (e.g., +234 for Nigeria, +1 for US).`
+      };
     }
 
     // Send message
     const result = await whatsappClient.sendMessage(formattedNumber, messageText);
     
+    // Verify message was sent
+    if (!result || !result.id) {
+      return {
+        success: false,
+        message: `❌ Message sending failed. No confirmation received.`
+      };
+    }
+    
     // Log message
     const logEntry = {
       timestamp: Date.now(),
       recipient: recipientNumber,
+      formattedRecipient: formattedNumber,
       message: messageText,
       messageId: result.id._serialized,
       status: 'sent',
@@ -86,9 +130,11 @@ async function sendWhatsAppMessage(recipientNumber, messageText, devKey) {
     messageLogs.push(logEntry);
     saveMessageLogs();
 
+    console.log(`✅ WhatsApp message sent successfully! Message ID: ${result.id._serialized}`);
+
     return {
       success: true,
-      message: `✅ WhatsApp message sent successfully to ${recipientNumber}!\n\nMessage ID: ${result.id._serialized}`,
+      message: `✅ WhatsApp message sent successfully to ${recipientNumber}!\n\nMessage ID: ${result.id._serialized}\nFormatted number: ${formattedNumber}`,
       messageId: result.id._serialized
     };
   } catch (error) {
@@ -106,9 +152,18 @@ async function sendWhatsAppMessage(recipientNumber, messageText, devKey) {
     messageLogs.push(logEntry);
     saveMessageLogs();
 
+    let errorMessage = `❌ Failed to send WhatsApp message: ${error.message}`;
+    
+    // Provide helpful error messages
+    if (error.message.includes('not registered')) {
+      errorMessage += '\n\nThe number is not registered on WhatsApp. Please verify the number format includes country code.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage += '\n\nRequest timed out. Please check your internet connection.';
+    }
+
     return {
       success: false,
-      message: `❌ Failed to send WhatsApp message: ${error.message}`
+      message: errorMessage
     };
   }
 }
