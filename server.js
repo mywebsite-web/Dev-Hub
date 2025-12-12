@@ -227,8 +227,26 @@ app.post('/api/chat', async (req, res) => {
     const isDeveloperChat = developerChatSessions.has(conversationId) || 
                            userContext.isDeveloper(message, conversationId);
     
+    // Special greeting for developer activation
     if (isDeveloperChat && !developerChatSessions.has(conversationId)) {
       developerChatSessions.add(conversationId);
+      
+      // Check if it's a greeting that activated developer mode
+      const greetingPatterns = [
+        /^hi\s*(dev|abdulsalam|tiamiyu)/i,
+        /^(hello|hey)\s*(dev|abdulsalam|tiamiyu)/i,
+        /^\/devchat/i
+      ];
+      
+      const isGreeting = greetingPatterns.some(pattern => pattern.test(message.trim()));
+      
+      if (isGreeting) {
+        return res.json({
+          response: "Hey Abdulsalam! 👋 Developer chat mode activated. How can I help you today?",
+          conversationId: conversationId,
+          isDeveloperChat: true
+        });
+      }
     }
 
     // Check for command parsing (WhatsApp, Reminders, etc.)
