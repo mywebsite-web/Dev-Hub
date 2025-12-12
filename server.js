@@ -3,6 +3,13 @@ const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
 
+// Import modules
+const commandParser = require('./modules/commandParser');
+const userContext = require('./modules/userContext');
+const whatsapp = require('./modules/whatsapp');
+const email = require('./modules/email');
+const reminders = require('./modules/reminders');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -27,6 +34,9 @@ const devCommandLogs = [];
 
 // Store conversation history for context
 const conversations = new Map();
+
+// Developer chat sessions (conversations where developer is chatting)
+const developerChatSessions = new Set();
 
 // Developer command functions
 const developerCommands = {
@@ -211,6 +221,30 @@ app.post('/api/chat', async (req, res) => {
 
     if (!message || message.trim() === '') {
       return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Check if this is a developer chat session
+    const isDeveloperChat = developerChatSessions.has(conversationId) || 
+                           userContext.isDeveloper(message, conversationId);
+    
+    if (isDeveloperChat && !developerChatSessions.has(conversationId)) {
+      developerChatSessions.add(conversationId);
+    }
+
+    // Check for command parsing (WhatsApp, Email, Reminders, etc.)
+    const commandResult = await commandParser.parseCommand(
+      message, 
+      DEV_SECRET_KEY, 
+      isDeveloperChat
+    );
+    
+    if (commandResult !== null) {
+      return res.json({
+        response: commandResult.message,
+        conversationId: conversationId,
+        isCommand: true,
+        isDeveloperChat: isDeveloperChat
+      });
     }
 
     // Check for developer commands first
@@ -429,6 +463,60 @@ app.get('/api/dev/logs', (req, res) => {
   });
 });
 
+// WhatsApp status endpoint
+app.get('/api/dev/whatsapp/status', (req, res) => {
+  const authKey = req.query.key || req.headers['x-dev-key'];
+  
+  if (authKey !== DEV_SECRET_KEY) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid developer key' 
+    });
+  }
+  
+  res.json({
+    success: true,
+    status: whatsapp.getWhatsAppStatus(),
+    logs: whatsapp.getMessageLogs(20)
+  });
+});
+
+// Email status endpoint
+app.get('/api/dev/email/status', (req, res) => {
+  const authKey = req.query.key || req.headers['x-dev-key'];
+  
+  if (authKey !== DEV_SECRET_KEY) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid developer key' 
+    });
+  }
+  
+  res.json({
+    success: true,
+    status: email.getEmailStatus(),
+    logs: email.getEmailLogs(20)
+  });
+});
+
+// Reminders endpoint
+app.get('/api/dev/reminders', (req, res) => {
+  const authKey = req.query.key || req.headers['x-dev-key'];
+  
+  if (authKey !== DEV_SECRET_KEY) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid developer key' 
+    });
+  }
+  
+  const status = req.query.status || 'all';
+  res.json({
+    success: true,
+    reminders: reminders.getReminders(status)
+  });
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Dev GPT server is running on port ${PORT}`);
@@ -441,5 +529,12 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`⚠️  Note: For better performance, add your Hugging Face API token`);
     console.log(`   Get one free at: https://huggingface.co/settings/tokens`);
   }
+  console.log(`\n🔐 Developer Chat Mode: Say "hi dev" or "hello abdulsalam" to start developer chat`);
+  console.log(`📱 WhatsApp: Initializing... (scan QR code when prompted)`);
+  console.log(`📧 Email: ${email.getEmailStatus().isConfigured ? 'Configured' : 'Not configured - set EMAIL_USER and EMAIL_PASSWORD in .env'}`);
+  
+  // Initialize WhatsApp and Email
+  whatsapp.initializeWhatsApp();
+  email.initializeEmail();
 });
 

@@ -10,6 +10,12 @@ A simple, friendly AI chatbot built with Node.js and HTML/JavaScript. Dev GPT is
 - 🎨 Beautiful gradient UI design
 - 📱 Responsive design for mobile and desktop
 - 🚀 Easy to run locally
+- 🔐 **Developer Chat Mode** - Free conversation for authorized developers
+- 📱 **WhatsApp Integration** - Send messages via WhatsApp
+- 📧 **Email Integration** - Send emails via Nodemailer
+- ⏰ **Reminders System** - Schedule and manage reminders
+- 👥 **Contact Management** - Store and manage contacts
+- 🛠️ **Developer Commands** - Advanced command system
 
 ## Prerequisites
 
@@ -23,20 +29,28 @@ A simple, friendly AI chatbot built with Node.js and HTML/JavaScript. Dev GPT is
    npm install
    ```
 
-2. **Optional: Set up Hugging Face API Token (recommended)**
+2. **Set up Environment Variables**
    
-   For better performance and reliability, you can get a free API token from Hugging Face:
+   Create a `.env` file in the project root:
+   ```
+   # Required
+   PORT=3000
    
-   - Go to [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-   - Create a free account if you don't have one
-   - Generate a new token
-   - Create a `.env` file in the project root:
-     ```
-     HUGGINGFACE_API_TOKEN=your_token_here
-     PORT=3000
-     ```
+   # Recommended
+   HUGGINGFACE_API_TOKEN=your_token_here
+   DEV_SECRET_KEY=your_secure_secret_key
    
-   **Note:** The app will work without a token, but responses may be slower or less reliable.
+   # Email Configuration (for email features)
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_SECURE=false
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASSWORD=your-app-password
+   ```
+   
+   **Note:** 
+   - Get Hugging Face token at: [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+   - For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password
 
 ## Running the Application
 
