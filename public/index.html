@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev GPT - Your Friendly AI Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Sidebar for chat list -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button id="newChatButton" class="new-chat-button">
+                    ➕ New Chat
+                </button>
+                <button id="closeSidebarButton" class="close-sidebar-button" title="Close sidebar">
+                    ✕
+                </button>
+            </div>
+            <div class="chat-list" id="chatList">
+                <!-- Chat list items will be dynamically added here -->
+            </div>
+        </aside>
+
+        <!-- Main content area -->
+        <div class="container">
+            <header>
+                <div class="header-content">
+                    <div>
+                        <h1>🤖 Dev GPT</h1>
+                        <p class="subtitle">Your friendly AI assistant for programming, sports, and general questions</p>
+                    </div>
+                    <div class="header-buttons">
+                        <button id="showSidebarButton" class="show-sidebar-button" title="Show chat list">
+                            💬 Chats
+                        </button>
+                        <button id="clearChatButton" class="clear-button" title="Clear current chat">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="chat-container">
+                <div id="chatDisplay" class="chat-display">
+                    <!-- Chat history will be loaded from localStorage or welcome message will be displayed -->
+                </div>
+
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="userInput" 
+                        placeholder="Type your message here..." 
+                        autocomplete="off"
+                    >
+                    <button id="sendButton" class="send-button">
+                        <span>Send</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

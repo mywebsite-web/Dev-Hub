@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dev-gpt
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HUGGINGFACE_API_TOKEN
+        sync: false
+    healthCheckPath: /api/health
+
