@@ -530,11 +530,22 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   Get one free at: https://huggingface.co/settings/tokens`);
   }
   console.log(`\n🔐 Developer Chat Mode: Say "hi dev" or "hello abdulsalam" to start developer chat`);
-  console.log(`📱 WhatsApp: Initializing... (scan QR code when prompted)`);
+  
+  // Check environment for WhatsApp
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isRender = process.env.RENDER === 'true' || process.env.RENDER_EXTERNAL_URL;
+  
+  if (isProduction || isRender) {
+    console.log(`📱 WhatsApp: Disabled in cloud environment (requires QR code scan)`);
+    console.log(`   💡 Tip: Use WhatsApp locally or integrate a cloud WhatsApp API service`);
+  } else {
+    console.log(`📱 WhatsApp: Initializing... (scan QR code when prompted)`);
+    whatsapp.initializeWhatsApp();
+  }
+  
   console.log(`📧 Email: ${email.getEmailStatus().isConfigured ? 'Configured' : 'Not configured - set EMAIL_USER and EMAIL_PASSWORD in .env'}`);
   
-  // Initialize WhatsApp and Email
-  whatsapp.initializeWhatsApp();
+  // Initialize Email
   email.initializeEmail();
 });
 

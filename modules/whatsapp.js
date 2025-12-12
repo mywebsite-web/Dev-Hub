@@ -9,6 +9,16 @@ const messageLogs = [];
 
 // Initialize WhatsApp client
 function initializeWhatsApp() {
+  // Check if running in production/cloud environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isRender = process.env.RENDER === 'true' || process.env.RENDER_EXTERNAL_URL;
+  
+  if (isProduction || isRender) {
+    console.log('⚠️ WhatsApp Web.js requires QR code scanning which is not available in cloud environments.');
+    console.log('📱 WhatsApp feature is disabled in production. Use a cloud WhatsApp API service instead.');
+    return null;
+  }
+
   if (whatsappClient) {
     return whatsappClient;
   }
@@ -74,6 +84,23 @@ function formatWhatsAppNumber(number) {
 // Send WhatsApp message
 async function sendWhatsAppMessage(recipientNumber, messageText, devKey) {
   try {
+    // Check if running in production/cloud environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isRender = process.env.RENDER === 'true' || process.env.RENDER_EXTERNAL_URL;
+    
+    if (isProduction || isRender) {
+      return {
+        success: false,
+        message: '⚠️ WhatsApp Web.js is not available in cloud environments (Render, Heroku, etc.)\n\n' +
+                 'WhatsApp Web.js requires QR code scanning which cannot be done on cloud servers.\n\n' +
+                 '**Solutions:**\n' +
+                 '1. Use WhatsApp locally (run `npm start` on your computer)\n' +
+                 '2. Use a cloud WhatsApp API service (Twilio, WhatsApp Business API)\n' +
+                 '3. Set up a local WhatsApp bridge service\n\n' +
+                 'For now, WhatsApp features work only in local development environment.'
+      };
+    }
+
     if (!whatsappClient) {
       initializeWhatsApp();
       return {
@@ -85,7 +112,9 @@ async function sendWhatsAppMessage(recipientNumber, messageText, devKey) {
     if (!isReady) {
       return {
         success: false,
-        message: '⚠️ WhatsApp client is not ready. Please wait for QR code scan and authentication.\n\nCheck the console for QR code to scan with WhatsApp.'
+        message: '⚠️ WhatsApp client is not ready. Please wait for QR code scan and authentication.\n\n' +
+                 'Check the console/terminal for QR code to scan with WhatsApp.\n' +
+                 'Look for the QR code in the server output.'
       };
     }
 
