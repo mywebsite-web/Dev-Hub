@@ -22,7 +22,14 @@ Unlike WhatsApp (which requires QR code scanning), all social media platforms us
 
 1. Go to [Twitter Developer Portal](https://developer.twitter.com/)
 2. Create a new app and get your API credentials
-3. Add to `.env`:
+3. **IMPORTANT - Set App Permissions:**
+   - Go to your app's "User authentication settings"
+   - Select **"Read and write"** or **"Read and write and Direct message"**
+   - This is required for posting tweets (403 error if not set)
+4. **Generate Access Token with Write Permissions:**
+   - After setting permissions, regenerate your Access Token
+   - Make sure it has `tweet.write` scope
+5. Add to `.env`:
    ```
    TWITTER_API_KEY=your_api_key
    TWITTER_API_SECRET=your_api_secret
@@ -30,6 +37,11 @@ Unlike WhatsApp (which requires QR code scanning), all social media platforms us
    TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
    TWITTER_BEARER_TOKEN=your_bearer_token (optional)
    ```
+
+**⚠️ Common Issues:**
+- **403 Error**: App doesn't have write permissions. Enable "Read and write" in app settings.
+- **401 Error**: Invalid or expired tokens. Regenerate your Access Token.
+- **429 Error**: Rate limit exceeded. Wait before posting again.
 
 ### 2. Instagram Setup
 
