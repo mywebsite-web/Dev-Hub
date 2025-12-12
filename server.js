@@ -230,7 +230,7 @@ app.post('/api/chat', async (req, res) => {
       developerChatSessions.add(conversationId);
     }
 
-    // Check for command parsing (WhatsApp, Email, Reminders, etc.)
+    // Check for command parsing (WhatsApp, Reminders, etc.)
     const commandResult = await commandParser.parseCommand(
       message, 
       DEV_SECRET_KEY, 
