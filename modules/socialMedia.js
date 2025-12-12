@@ -71,31 +71,9 @@ async function postToTwitter(text, devKey) {
     console.error('Twitter post error:', error);
     logSocialMediaAction('twitter', 'post', text, null, 'failed', devKey, error.message);
     
-    let errorMessage = `❌ Failed to post tweet: ${error.message || 'Unknown error'}`;
-    
-    // Provide helpful error messages for common issues
-    if (error.code === 403 || error.message.includes('403')) {
-      errorMessage += '\n\n🔧 Troubleshooting 403 Error:\n';
-      errorMessage += '1. Check if your Twitter app has WRITE permissions enabled\n';
-      errorMessage += '2. Verify your Access Token has "tweet.write" scope\n';
-      errorMessage += '3. Go to https://developer.twitter.com/en/portal/dashboard\n';
-      errorMessage += '4. Check your app\'s "User authentication settings"\n';
-      errorMessage += '5. Ensure "Read and write" or "Read and write and Direct message" is selected\n';
-      errorMessage += '6. Regenerate your Access Token after changing permissions\n';
-      errorMessage += '7. Make sure you\'re using Twitter API v2 (not v1.1)';
-    } else if (error.code === 401 || error.message.includes('401')) {
-      errorMessage += '\n\n🔧 Authentication Error:\n';
-      errorMessage += '1. Verify your API keys and tokens are correct\n';
-      errorMessage += '2. Check if tokens have expired\n';
-      errorMessage += '3. Regenerate tokens if needed';
-    } else if (error.code === 429 || error.message.includes('429')) {
-      errorMessage += '\n\n🔧 Rate Limit Error:\n';
-      errorMessage += 'You\'ve exceeded Twitter\'s rate limit. Please wait before posting again.';
-    }
-    
     return {
       success: false,
-      message: errorMessage
+      message: `❌ Failed to post tweet: ${error.message || 'Unknown error'}`
     };
   }
 }
