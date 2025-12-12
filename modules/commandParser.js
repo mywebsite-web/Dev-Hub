@@ -1,6 +1,7 @@
 const whatsapp = require('./whatsapp');
 const reminders = require('./reminders');
 const userContext = require('./userContext');
+const socialMedia = require('./socialMedia');
 
 // Parse and execute commands
 async function parseCommand(message, devKey, isDeveloperChat = false) {
@@ -141,6 +142,161 @@ async function parseCommand(message, devKey, isDeveloperChat = false) {
       success: true,
       message: `⏰ Pending Reminders (${pendingReminders.length}):\n\n${remindersList}`
     };
+  }
+
+  // X/Twitter: Post
+  if (trimmedMessage.startsWith('/x-post ') || trimmedMessage.startsWith('/twitter-post ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const text = trimmedMessage.substring(trimmedMessage.startsWith('/x-post ') ? 8 : 14).trim();
+    if (!text) {
+      return {
+        success: false,
+        message: '❌ Invalid Twitter post format.\n\nUsage: /x-post "TEXT"\nExample: /x-post "Hello from Dev-GPT!"'
+      };
+    }
+    
+    // Remove quotes if present
+    const cleanText = text.replace(/^"|"$/g, '');
+    return await socialMedia.postToTwitter(cleanText, devKey);
+  }
+
+  // X/Twitter: Search
+  if (trimmedMessage.startsWith('/x-search ') || trimmedMessage.startsWith('/twitter-search ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const query = trimmedMessage.substring(trimmedMessage.startsWith('/x-search ') ? 10 : 16).trim();
+    if (!query) {
+      return {
+        success: false,
+        message: '❌ Invalid Twitter search format.\n\nUsage: /x-search "QUERY"\nExample: /x-search "Dev-GPT"'
+      };
+    }
+    
+    const cleanQuery = query.replace(/^"|"$/g, '');
+    return await socialMedia.searchTwitter(cleanQuery, devKey);
+  }
+
+  // Instagram: Post
+  if (trimmedMessage.startsWith('/instagram-post ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const parts = trimmedMessage.substring(16).trim().split(/\s+/);
+    if (parts.length < 1) {
+      return {
+        success: false,
+        message: '❌ Invalid Instagram post format.\n\nUsage: /instagram-post "TEXT" [IMAGE_URL]\nExample: /instagram-post "Hello!" https://example.com/image.jpg'
+      };
+    }
+    
+    const text = parts[0].replace(/^"|"$/g, '');
+    const imagePath = parts[1] || null;
+    return await socialMedia.postToInstagram(text, imagePath, devKey);
+  }
+
+  // LinkedIn: Post
+  if (trimmedMessage.startsWith('/linkedin-post ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const text = trimmedMessage.substring(15).trim();
+    if (!text) {
+      return {
+        success: false,
+        message: '❌ Invalid LinkedIn post format.\n\nUsage: /linkedin-post "TEXT"\nExample: /linkedin-post "Hello from Dev-GPT!"'
+      };
+    }
+    
+    const cleanText = text.replace(/^"|"$/g, '');
+    return await socialMedia.postToLinkedIn(cleanText, devKey);
+  }
+
+  // Reddit: Comment
+  if (trimmedMessage.startsWith('/reddit-comment ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const parts = trimmedMessage.substring(16).trim().split(/\s+/);
+    if (parts.length < 2) {
+      return {
+        success: false,
+        message: '❌ Invalid Reddit comment format.\n\nUsage: /reddit-comment "TEXT" SUBREDDIT\nExample: /reddit-comment "Great post!" programming'
+      };
+    }
+    
+    const text = parts[0].replace(/^"|"$/g, '');
+    const subreddit = parts[1];
+    return await socialMedia.commentOnReddit(subreddit, text, devKey);
+  }
+
+  // Reddit: Post
+  if (trimmedMessage.startsWith('/reddit-post ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const content = trimmedMessage.substring(13).trim();
+    const textMatch = content.match(/"([^"]+)"/g);
+    
+    if (!textMatch || textMatch.length < 2) {
+      return {
+        success: false,
+        message: '❌ Invalid Reddit post format.\n\nUsage: /reddit-post "TITLE" "TEXT" SUBREDDIT\nExample: /reddit-post "My Post" "Content here" programming'
+      };
+    }
+    
+    const title = textMatch[0].replace(/^"|"$/g, '');
+    const text = textMatch[1].replace(/^"|"$/g, '');
+    const subreddit = content.split('"').pop().trim();
+    
+    return await socialMedia.postToReddit(subreddit, title, text, devKey);
+  }
+
+  // Facebook: Post
+  if (trimmedMessage.startsWith('/facebook-post ') || trimmedMessage.startsWith('/fb-post ')) {
+    if (!isDeveloperChat && !devKey) {
+      return {
+        success: false,
+        message: '🔒 Unauthorized. Developer secret key required for social media commands.'
+      };
+    }
+    
+    const text = trimmedMessage.substring(trimmedMessage.startsWith('/facebook-post ') ? 15 : 9).trim();
+    if (!text) {
+      return {
+        success: false,
+        message: '❌ Invalid Facebook post format.\n\nUsage: /facebook-post "TEXT"\nExample: /facebook-post "Hello from Dev-GPT!"'
+      };
+    }
+    
+    const cleanText = text.replace(/^"|"$/g, '');
+    return await socialMedia.postToFacebook(cleanText, devKey);
   }
   
   // Not a command

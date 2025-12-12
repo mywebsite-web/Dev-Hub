@@ -8,6 +8,7 @@ const commandParser = require('./modules/commandParser');
 const userContext = require('./modules/userContext');
 const whatsapp = require('./modules/whatsapp');
 const reminders = require('./modules/reminders');
+const socialMedia = require('./modules/socialMedia');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -499,6 +500,24 @@ app.get('/api/dev/reminders', (req, res) => {
   });
 });
 
+// Social Media logs endpoint
+app.get('/api/dev/social-media/logs', (req, res) => {
+  const authKey = req.query.key || req.headers['x-dev-key'];
+  
+  if (authKey !== DEV_SECRET_KEY) {
+    return res.status(401).json({ 
+      error: 'Unauthorized',
+      message: 'Invalid developer key' 
+    });
+  }
+  
+  const limit = parseInt(req.query.limit) || 20;
+  res.json({
+    success: true,
+    logs: socialMedia.getSocialMediaLogs(limit)
+  });
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Dev GPT server is running on port ${PORT}`);
@@ -525,5 +544,14 @@ app.listen(PORT, '0.0.0.0', () => {
     whatsapp.initializeWhatsApp();
   }
   
+  // Initialize Social Media
+  console.log(`\n📱 Social Media Integration:`);
+  socialMedia.initializeTwitter();
+  socialMedia.initializeReddit();
+  console.log(`   • Twitter: ${process.env.TWITTER_API_KEY ? 'Configured' : 'Not configured'}`);
+  console.log(`   • Instagram: ${process.env.INSTAGRAM_ACCESS_TOKEN ? 'Configured' : 'Not configured'}`);
+  console.log(`   • LinkedIn: ${process.env.LINKEDIN_ACCESS_TOKEN ? 'Configured' : 'Not configured'}`);
+  console.log(`   • Reddit: ${process.env.REDDIT_CLIENT_ID ? 'Configured' : 'Not configured'}`);
+  console.log(`   • Facebook: ${process.env.FACEBOOK_ACCESS_TOKEN ? 'Configured' : 'Not configured'}`);
 });
 

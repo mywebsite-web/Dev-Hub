@@ -7,7 +7,14 @@ let userContext = {
   developer: {
     name: 'Tiamiyu Abdulsalam Adedayo',
     alias: 'Abdulsalam Dev',
-    isDeveloper: true
+    isDeveloper: true,
+    socialMedia: {
+      twitter: '',
+      instagram: '',
+      linkedin: '',
+      reddit: '',
+      facebook: ''
+    }
   },
   contacts: [],
   emailAddresses: []
@@ -95,6 +102,21 @@ function findEmail(query) {
   );
 }
 
+// Update developer social media handles
+function updateDeveloperSocialMedia(platform, handle) {
+  if (!userContext.developer.socialMedia) {
+    userContext.developer.socialMedia = {};
+  }
+  userContext.developer.socialMedia[platform] = handle;
+  saveContext();
+  return userContext.developer.socialMedia;
+}
+
+// Get developer social media handles
+function getDeveloperSocialMedia() {
+  return userContext.developer.socialMedia || {};
+}
+
 // Check if user is developer
 function isDeveloper(userMessage, conversationId) {
   // Simple check - can be enhanced with more sophisticated detection
@@ -118,6 +140,8 @@ module.exports = {
   findContact,
   findEmail,
   isDeveloper,
-  saveContext
+  saveContext,
+  updateDeveloperSocialMedia,
+  getDeveloperSocialMedia
 };
 

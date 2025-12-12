@@ -99,5 +99,8 @@ For **production**: Integrate Twilio WhatsApp API or WhatsApp Business API.
 
 ---
 
-**Note:** Email and Reminders features work perfectly on cloud servers! Only WhatsApp has this limitation.
+**Note:** 
+- ✅ **Social Media features** (Twitter, Instagram, LinkedIn, Reddit, Facebook) work perfectly on cloud servers!
+- ✅ **Reminders** work perfectly on cloud servers (with console logging)!
+- ❌ **WhatsApp** has this limitation (requires QR code scanning - local only)
 
