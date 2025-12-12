@@ -2,7 +2,6 @@ const schedule = require('node-schedule');
 const fs = require('fs');
 const path = require('path');
 const whatsapp = require('./whatsapp');
-const email = require('./email');
 
 const reminders = [];
 let reminderJobs = new Map();
@@ -74,19 +73,6 @@ function scheduleReminder(reminder) {
         );
       } catch (error) {
         console.error('Error sending WhatsApp reminder:', error);
-      }
-    }
-    
-    if (reminder.notifyEmail && reminder.emailAddress) {
-      try {
-        await email.sendEmail(
-          reminder.emailAddress,
-          '⏰ Reminder',
-          `REMINDER: ${reminder.text}`,
-          null
-        );
-      } catch (error) {
-        console.error('Error sending email reminder:', error);
       }
     }
     

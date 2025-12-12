@@ -7,7 +7,6 @@ require('dotenv').config();
 const commandParser = require('./modules/commandParser');
 const userContext = require('./modules/userContext');
 const whatsapp = require('./modules/whatsapp');
-const email = require('./modules/email');
 const reminders = require('./modules/reminders');
 
 const app = express();
@@ -481,23 +480,6 @@ app.get('/api/dev/whatsapp/status', (req, res) => {
   });
 });
 
-// Email status endpoint
-app.get('/api/dev/email/status', (req, res) => {
-  const authKey = req.query.key || req.headers['x-dev-key'];
-  
-  if (authKey !== DEV_SECRET_KEY) {
-    return res.status(401).json({ 
-      error: 'Unauthorized',
-      message: 'Invalid developer key' 
-    });
-  }
-  
-  res.json({
-    success: true,
-    status: email.getEmailStatus(),
-    logs: email.getEmailLogs(20)
-  });
-});
 
 // Reminders endpoint
 app.get('/api/dev/reminders', (req, res) => {
@@ -543,9 +525,5 @@ app.listen(PORT, '0.0.0.0', () => {
     whatsapp.initializeWhatsApp();
   }
   
-  console.log(`📧 Email: ${email.getEmailStatus().isConfigured ? 'Configured' : 'Not configured - set EMAIL_USER and EMAIL_PASSWORD in .env'}`);
-  
-  // Initialize Email
-  email.initializeEmail();
 });
 

@@ -1,5 +1,4 @@
 const whatsapp = require('./whatsapp');
-const email = require('./email');
 const reminders = require('./reminders');
 const userContext = require('./userContext');
 
@@ -32,34 +31,6 @@ async function parseCommand(message, devKey, isDeveloperChat = false) {
     const finalNumber = contact ? contact.phoneNumber : recipientNumber;
     
     return await whatsapp.sendWhatsAppMessage(finalNumber, messageText, devKey);
-  }
-  
-  // Email command: /email RECIPIENT_EMAIL SUBJECT MESSAGE_TEXT
-  if (trimmedMessage.startsWith('/email ')) {
-    if (!isDeveloperChat && !devKey) {
-      return {
-        success: false,
-        message: '🔒 Unauthorized. Developer secret key required for email commands.'
-      };
-    }
-    
-    const parts = trimmedMessage.substring(7).trim().split(/\s+/);
-    if (parts.length < 3) {
-      return {
-        success: false,
-        message: '❌ Invalid email command format.\n\nUsage: /email RECIPIENT_EMAIL SUBJECT MESSAGE_TEXT\nExample: /email user@example.com Hello This is a test email'
-      };
-    }
-    
-    const recipientEmail = parts[0];
-    const subject = parts[1];
-    const messageText = parts.slice(2).join(' ');
-    
-    // Check if email is in contacts
-    const emailEntry = userContext.findEmail(recipientEmail);
-    const finalEmail = emailEntry ? emailEntry.email : recipientEmail;
-    
-    return await email.sendEmail(finalEmail, subject, messageText, devKey);
   }
   
   // Reminder command: /remind "YYYY-MM-DD HH:mm" "REMINDER_TEXT"
@@ -115,33 +86,6 @@ async function parseCommand(message, devKey, isDeveloperChat = false) {
     return {
       success: true,
       message: `✅ Contact added!\n\nName: ${contact.name}\nPhone: ${contact.phoneNumber}${contact.email ? `\nEmail: ${contact.email}` : ''}`
-    };
-  }
-  
-  // Add email command: /addemail NAME EMAIL
-  if (trimmedMessage.startsWith('/addemail ')) {
-    if (!isDeveloperChat && !devKey) {
-      return {
-        success: false,
-        message: '🔒 Unauthorized. Developer secret key required.'
-      };
-    }
-    
-    const parts = trimmedMessage.substring(10).trim().split(/\s+/);
-    if (parts.length < 2) {
-      return {
-        success: false,
-        message: '❌ Invalid add email format.\n\nUsage: /addemail NAME EMAIL'
-      };
-    }
-    
-    const name = parts[0];
-    const emailAddress = parts[1];
-    
-    const emailEntry = userContext.addEmailAddress(name, emailAddress);
-    return {
-      success: true,
-      message: `✅ Email address added!\n\nName: ${emailEntry.name}\nEmail: ${emailEntry.email}`
     };
   }
   

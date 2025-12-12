@@ -11,8 +11,7 @@ A simple, friendly AI chatbot built with Node.js and HTML/JavaScript. Dev GPT is
 - 📱 Responsive design for mobile and desktop
 - 🚀 Easy to run locally
 - 🔐 **Developer Chat Mode** - Free conversation for authorized developers
-- 📱 **WhatsApp Integration** - Send messages via WhatsApp
-- 📧 **Email Integration** - Send emails via Nodemailer
+- 📱 **WhatsApp Integration** - Send messages via WhatsApp (local only)
 - ⏰ **Reminders System** - Schedule and manage reminders
 - 👥 **Contact Management** - Store and manage contacts
 - 🛠️ **Developer Commands** - Advanced command system
@@ -40,17 +39,10 @@ A simple, friendly AI chatbot built with Node.js and HTML/JavaScript. Dev GPT is
    HUGGINGFACE_API_TOKEN=your_token_here
    DEV_SECRET_KEY=your_secure_secret_key
    
-   # Email Configuration (for email features)
-   EMAIL_HOST=smtp.gmail.com
-   EMAIL_PORT=587
-   EMAIL_SECURE=false
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASSWORD=your-app-password
    ```
    
    **Note:** 
    - Get Hugging Face token at: [https://huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-   - For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password
 
 ## Running the Application
 
