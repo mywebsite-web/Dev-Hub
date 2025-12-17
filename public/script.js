@@ -17,9 +17,13 @@ const chatList = document.getElementById('chatList');
 const showSidebarButton = document.getElementById('showSidebarButton');
 const closeSidebarButton = document.getElementById('closeSidebarButton');
 const sidebar = document.getElementById('sidebar');
+const modeSelect = document.getElementById('modeSelect');
 
 // API endpoint
 const API_URL = '/api/chat';
+
+// Current mode
+let currentMode = 'normal';
 
 // Load all chats from localStorage
 function loadChats() {
@@ -207,6 +211,21 @@ function hideSidebar() {
     }
 }
 
+// Update placeholder based on mode
+function updatePlaceholderForMode() {
+    if (!modeSelect || !userInput) return;
+    
+    const placeholders = {
+        normal: 'Type your message here...',
+        write: 'Describe the code you want me to write...',
+        debug: 'Paste your code and error message...',
+        explain: 'Paste the code you want explained...',
+        refactor: 'Paste the code you want refactored...'
+    };
+    const mode = modeSelect.value || 'normal';
+    userInput.placeholder = placeholders[mode] || placeholders.normal;
+}
+
 // Initialize app
 function initializeApp() {
     loadChats();
@@ -221,11 +240,63 @@ function initializeApp() {
     // Sidebar toggle buttons
     showSidebarButton.addEventListener('click', showSidebar);
     closeSidebarButton.addEventListener('click', hideSidebar);
+    
+    // Mode selector change handler
+    if (modeSelect) {
+        modeSelect.addEventListener('change', (e) => {
+            currentMode = e.target.value;
+            updatePlaceholderForMode();
+        });
+        
+        // Initialize placeholder
+        updatePlaceholderForMode();
+    }
 }
 
 // Initialize on page load
 initializeApp();
 userInput.focus();
+
+// Format code blocks in message content
+function formatCodeBlocks(text) {
+    // First, protect code blocks by replacing them with placeholders
+    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+    const codeBlockPlaceholders = [];
+    let placeholderIndex = 0;
+    
+    // Replace code blocks with placeholders
+    let textWithPlaceholders = text.replace(codeBlockRegex, (match, lang, code) => {
+        const placeholder = `__CODE_BLOCK_${placeholderIndex}__`;
+        codeBlockPlaceholders.push({
+            placeholder,
+            language: lang || 'text',
+            code: escapeHtml(code.trim())
+        });
+        placeholderIndex++;
+        return placeholder;
+    });
+    
+    // Now handle inline code in the remaining text
+    textWithPlaceholders = textWithPlaceholders.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+    
+    // Convert newlines to <br> for regular text
+    textWithPlaceholders = textWithPlaceholders.replace(/\n/g, '<br>');
+    
+    // Replace placeholders back with formatted code blocks
+    codeBlockPlaceholders.forEach(({ placeholder, language, code }) => {
+        const codeBlock = `<pre><code class="language-${language}"><span class="code-lang">${language}</span>${code}</code></pre>`;
+        textWithPlaceholders = textWithPlaceholders.replace(placeholder, codeBlock);
+    });
+    
+    return textWithPlaceholders;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // Add message to chat display (internal function, doesn't save to localStorage)
 function addMessageToDisplay(content, isUser = false, saveToStorage = true) {
@@ -238,7 +309,8 @@ function addMessageToDisplay(content, isUser = false, saveToStorage = true) {
     if (isUser) {
         messageContent.textContent = content;
     } else {
-        messageContent.innerHTML = `<strong>Dev GPT:</strong> ${content}`;
+        const formattedContent = formatCodeBlocks(content);
+        messageContent.innerHTML = `<strong>Dev GPT:</strong> ${formattedContent}`;
     }
     
     messageDiv.appendChild(messageContent);
@@ -364,6 +436,10 @@ async function sendMessage() {
     updateStatus('Dev GPT is thinking...', 'typing');
     
     try {
+        // Get current mode
+        const selectedMode = modeSelect ? modeSelect.value : 'normal';
+        currentMode = selectedMode;
+        
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -371,7 +447,8 @@ async function sendMessage() {
             },
             body: JSON.stringify({
                 message: message,
-                conversationId: currentChatId || 'default'
+                conversationId: currentChatId || 'default',
+                mode: selectedMode
             })
         });
         

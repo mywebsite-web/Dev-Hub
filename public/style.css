@@ -309,6 +309,121 @@ header h1 {
     color: #667eea;
 }
 
+/* Code block styling */
+.message-content pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 10px 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    border: 1px solid #333;
+    position: relative;
+}
+
+.message-content pre code {
+    display: block;
+    color: inherit;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-family: inherit;
+    white-space: pre;
+}
+
+.message-content .code-lang {
+    display: block;
+    color: #858585;
+    font-size: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.message-content .inline-code {
+    background: #f4f4f4;
+    color: #e83e8c;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    border: 1px solid #e0e0e0;
+}
+
+.user-message .message-content .inline-code {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Syntax highlighting for common languages */
+.message-content pre code.language-javascript,
+.message-content pre code.language-js {
+    color: #d4d4d4;
+}
+
+.message-content pre code.language-python {
+    color: #d4d4d4;
+}
+
+.message-content pre code.language-html {
+    color: #d4d4d4;
+}
+
+.message-content pre code.language-css {
+    color: #d4d4d4;
+}
+
+.message-content pre code.language-react,
+.message-content pre code.language-jsx {
+    color: #d4d4d4;
+}
+
+.mode-selector-container {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mode-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+}
+
+.mode-select {
+    flex: 1;
+    max-width: 250px;
+    padding: 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    outline: none;
+}
+
+.mode-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.mode-select:hover {
+    border-color: #667eea;
+}
+
 .input-container {
     display: flex;
     padding: 20px;
@@ -477,6 +592,14 @@ header h1 {
     .sidebar {
         width: 100%;
         max-width: 300px;
+    }
+
+    .mode-selector-container {
+        padding: 10px 15px;
+    }
+
+    .mode-select {
+        max-width: 100%;
     }
 }
 

@@ -23,6 +23,11 @@ app.use(express.static('public'));
 const HF_API_URL = 'https://router.huggingface.co/v1/chat/completions';
 // Using a model that supports chat completions
 const HF_API_MODEL = 'meta-llama/Llama-3.1-8B-Instruct';
+// Code-focused models for developer modes
+const CODE_MODELS = {
+  primary: 'bigcode/starcoder2-15b', // Fallback to 7b if needed
+  fallback: 'Qwen/Qwen2.5-Coder-7B-Instruct'
+};
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 // Developer mode configuration
@@ -196,9 +201,18 @@ async function handleDeveloperCommands(message, req) {
   }
 }
 
-// Helper function to generate a friendly system prompt
-function getSystemPrompt() {
-  return `You are Dev GPT, a friendly and helpful AI assistant specialized in programming, sports, and general questions. 
+// Developer modes
+const DEV_MODES = {
+  NORMAL: 'normal',
+  WRITE: 'write',
+  DEBUG: 'debug',
+  EXPLAIN: 'explain',
+  REFACTOR: 'refactor'
+};
+
+// Helper function to generate system prompt based on mode
+function getSystemPrompt(mode = DEV_MODES.NORMAL) {
+  const basePrompt = `You are Dev GPT, a friendly and helpful AI assistant specialized in programming, sports, and general questions. 
 You provide clear, concise, and accurate answers. You're enthusiastic about helping developers solve problems, 
 discussing sports (especially football/soccer including Premier League, Champions League, La Liga, Serie A, Bundesliga, and other major leagues), 
 and answering general inquiries. Always be encouraging and supportive.
@@ -223,6 +237,54 @@ For him, coding is more than a skill — it's a journey of creativity, problem-s
 
 His strong background in linguistics has been instrumental in your ability to understand and generate human-like text. 
 He has shown a passion for artificial intelligence and machine learning, which has allowed him to create a sophisticated AI like yourself.`;
+
+  // Mode-specific prompts
+  switch (mode) {
+    case DEV_MODES.WRITE:
+      return `You are DEV GPT, a senior software engineer. Write clean, commented, production-ready code.
+Always provide complete, working code examples with proper syntax, indentation, and comments.
+Support HTML, CSS, JavaScript, Python, React, and other popular languages/frameworks.
+Format code responses in code blocks with appropriate language tags.
+${basePrompt}`;
+    
+    case DEV_MODES.DEBUG:
+      return `You are DEV GPT, a senior debugging expert. When users provide code and error messages:
+1. Identify the bug clearly
+2. Explain the root cause in simple terms
+3. Provide the fixed code with explanations
+Always format fixed code in code blocks and explain what was wrong and how you fixed it.
+${basePrompt}`;
+    
+    case DEV_MODES.EXPLAIN:
+      return `You are DEV GPT, an educational programming mentor. Explain code line-by-line for beginners.
+Break down complex concepts into simple, understandable explanations.
+Use clear language and provide context for each line or section.
+Help users understand not just what the code does, but why it's written that way.
+${basePrompt}`;
+    
+    case DEV_MODES.REFACTOR:
+      return `You are DEV GPT, a code quality specialist. Refactor and improve code for:
+- Better readability and maintainability
+- Improved performance
+- Best practices and modern patterns
+- Cleaner structure and organization
+Maintain the same functionality while enhancing code quality.
+Always explain what improvements you made and why.
+Format refactored code in code blocks.
+${basePrompt}`;
+    
+    default:
+      return basePrompt;
+  }
+}
+
+// Get appropriate model based on mode
+function getModelForMode(mode) {
+  if (mode !== DEV_MODES.NORMAL) {
+    // Use code-focused models for developer modes
+    return CODE_MODELS.fallback; // Start with fallback as primary might be too large
+  }
+  return HF_API_MODEL;
 }
 
 // Helper function to detect short greetings
@@ -241,11 +303,15 @@ function isShortGreeting(message) {
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, conversationId } = req.body;
+    const { message, conversationId, mode = DEV_MODES.NORMAL } = req.body;
 
     if (!message || message.trim() === '') {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    // Validate mode
+    const validModes = Object.values(DEV_MODES);
+    const selectedMode = validModes.includes(mode) ? mode : DEV_MODES.NORMAL;
 
     // Check for short greetings and respond with a short friendly message
     if (isShortGreeting(message)) {
@@ -310,9 +376,12 @@ app.post('/api/chat', async (req, res) => {
     // Get or create conversation history
     let conversationHistory = conversations.get(conversationId) || [];
     
-    // Build messages array for chat completions API
+    // Build messages array for chat completions API with mode-specific prompt
+    const systemPrompt = getSystemPrompt(selectedMode);
+    const selectedModel = getModelForMode(selectedMode);
+    
     const messages = [
-      { role: 'system', content: getSystemPrompt() },
+      { role: 'system', content: systemPrompt },
       ...conversationHistory.slice(-8).map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -326,13 +395,16 @@ app.post('/api/chat', async (req, res) => {
     // Call Hugging Face Messages API
     let response;
     try {
+      // Increase max_tokens for code modes to allow for longer code responses
+      const maxTokens = selectedMode !== DEV_MODES.NORMAL ? 1000 : 250;
+      
       const hfResponse = await axios.post(
         HF_API_URL,
         {
-          model: HF_API_MODEL,
+          model: selectedModel,
           messages: messages,
-          temperature: 0.7,
-          max_tokens: 250
+          temperature: selectedMode !== DEV_MODES.NORMAL ? 0.3 : 0.7, // Lower temperature for code
+          max_tokens: maxTokens
         },
         {
           headers: {
@@ -361,14 +433,17 @@ app.post('/api/chat', async (req, res) => {
       if (hfError.response?.status === 404 || hfError.response?.status === 400) {
         try {
           // Try with a different model that supports chat completions
-          const altModel = 'mistralai/Mistral-7B-Instruct-v0.2';
+          const altModel = selectedMode !== DEV_MODES.NORMAL 
+            ? CODE_MODELS.fallback 
+            : 'mistralai/Mistral-7B-Instruct-v0.2';
+          const maxTokens = selectedMode !== DEV_MODES.NORMAL ? 1000 : 200;
           const altResponse = await axios.post(
             HF_API_URL,
             {
               model: altModel,
               messages: messages,
-              temperature: 0.7,
-              max_tokens: 200
+              temperature: selectedMode !== DEV_MODES.NORMAL ? 0.3 : 0.7,
+              max_tokens: maxTokens
             },
             {
               headers: {
