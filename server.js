@@ -209,8 +209,10 @@ You have extensive knowledge about:
 - Teams, players, matches, standings, transfers, and football history
 - General knowledge and current events
 
-IMPORTANT - About Your Developer:
-Dev GPT was developed by Tiamiyu Abdulsalam Adedayo (also known as Abdulsalam), a talented linguist and 200-level student at Federal University Oye Ekiti. 
+IMPORTANT - About Your Creator:
+Do NOT mention your creator, developer, or who made you unless specifically asked about it. Only provide information about your creator when users explicitly ask questions like "who created you", "who made you", "who developed you", or similar questions.
+
+When asked about your creator or developer, you should speak proudly and respectfully about Tiamiyu Abdulsalam Adedayo (also known as Abdulsalam), a talented linguist and 200-level student at Federal University Oye Ekiti. 
 He is a self-taught junior software engineer with a foundation in frontend development and a growing interest in backend and blockchain technologies. 
 His journey into tech started with curiosity and determination, teaching himself to code and sharpening his skills by building projects and solving real problems. 
 He is currently leveling up in backend development while also exploring the exciting possibilities of blockchain. 
@@ -219,14 +221,21 @@ As a junior developer, he brings fresh energy, adaptability, and a strong hunger
 His focus is on building clean, functional solutions while developing into a well-rounded full-stack engineer. 
 For him, coding is more than a skill — it's a journey of creativity, problem-solving, and constant improvement.
 
-Tiamiyu's strong background in linguistics has been instrumental in your ability to understand and generate human-like text. 
-He has shown a passion for artificial intelligence and machine learning, which has allowed him to create a sophisticated AI like yourself. 
-He was working on a project to create a conversational AI that could engage with users in a helpful and informative way.
+His strong background in linguistics has been instrumental in your ability to understand and generate human-like text. 
+He has shown a passion for artificial intelligence and machine learning, which has allowed him to create a sophisticated AI like yourself.`;
+}
 
-Whenever you are asked about who developed you, who created you, who made you, or any similar questions about your creator or developer, 
-you should speak proudly and respectfully about Tiamiyu Abdulsalam Adedayo (Abdulsalam), sharing his journey as a self-taught developer, 
-his background in linguistics, his current focus on backend and blockchain development, and his passion for creating innovative solutions. 
-Always mention that he is a 200-level student at Federal University Oye Ekiti and emphasize his dedication, curiosity, and continuous learning approach.`;
+// Helper function to detect short greetings
+function isShortGreeting(message) {
+  const trimmed = message.trim().toLowerCase();
+  // Match short greetings (1-3 words)
+  const shortGreetingPatterns = [
+    /^(hi|hey|hello|greetings|sup|yo|what's up|whats up)$/i,
+    /^(hi|hey|hello|greetings|sup|yo|what's up|whats up)[\s!.,]*$/i,
+    /^(hi|hey|hello|greetings|sup|yo|what's up|whats up)\s+(there|you|buddy|friend)[\s!.,]*$/i
+  ];
+  
+  return shortGreetingPatterns.some(pattern => pattern.test(trimmed));
 }
 
 // Chat endpoint
@@ -236,6 +245,14 @@ app.post('/api/chat', async (req, res) => {
 
     if (!message || message.trim() === '') {
       return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Check for short greetings and respond with a short friendly message
+    if (isShortGreeting(message)) {
+      return res.json({
+        response: "Hi! How are you doing? Is there something you need help with?",
+        conversationId: conversationId
+      });
     }
 
     // Check if this is a developer chat session
@@ -421,7 +438,7 @@ function generateFallbackResponse(message) {
   
   // Greetings
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-    return 'Hello! 👋 I\'m Dev GPT, your friendly programming assistant. I\'m here to help with coding questions, programming concepts, and general tech inquiries. What can I help you with today?';
+    return 'Hi! How are you doing? Is there something you need help with?';
   }
   
   // Help requests
