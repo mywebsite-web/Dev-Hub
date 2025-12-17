@@ -32,6 +32,9 @@
                         <p class="subtitle">A developer-focused AI built by Abdulsalam Dev</p>
                     </div>
                     <div class="header-buttons">
+                        <button id="fullScreenButton" class="fullscreen-button" title="Toggle full screen">
+                            ⛶ Full Screen
+                        </button>
                         <button id="showSidebarButton" class="show-sidebar-button" title="Show chat list">
                             💬 Chats
                         </button>
@@ -58,12 +61,12 @@
                     </select>
                 </div>
                 <div class="input-container">
-                    <input 
-                        type="text" 
+                    <textarea 
                         id="userInput" 
-                        placeholder="Type your message here..." 
+                        placeholder="Type your message here... (Shift+Enter for new line)" 
                         autocomplete="off"
-                    >
+                        rows="1"
+                    ></textarea>
                     <button id="sendButton" class="send-button">
                         <span>Send</span>
                     </button>

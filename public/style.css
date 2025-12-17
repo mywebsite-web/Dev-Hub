@@ -10,6 +10,22 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 0;
+    transition: background 0.3s ease;
+}
+
+/* Full-screen mode styles */
+body.fullscreen-mode {
+    background: #ffffff;
+    overflow: hidden;
+}
+
+body.fullscreen-mode .app-wrapper {
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10000;
 }
 
 .app-wrapper {
@@ -200,6 +216,34 @@ header h1 {
     font-weight: 300;
 }
 
+.fullscreen-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.fullscreen-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.fullscreen-button:active {
+    transform: translateY(0);
+}
+
+.fullscreen-button.fullscreen-active {
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+}
+
 .clear-button {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -223,6 +267,59 @@ header h1 {
     transform: translateY(0);
 }
 
+/* Full-screen mode: hide header and status */
+body.fullscreen-mode header {
+    display: none;
+}
+
+body.fullscreen-mode .status {
+    display: none;
+}
+
+/* Full-screen mode: hide sidebar in full-screen */
+body.fullscreen-mode .sidebar {
+    display: none;
+}
+
+body.fullscreen-mode .sidebar-overlay {
+    display: none !important;
+}
+
+/* Full-screen mode: adjust container */
+body.fullscreen-mode .container {
+    height: 100vh;
+    background: #ffffff;
+}
+
+body.fullscreen-mode .chat-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Full-screen mode: hide mode selector or make it compact */
+body.fullscreen-mode .mode-selector-container {
+    padding: 8px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    max-width: 768px;
+    margin: 0 auto;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* Ensure proper scrolling in full-screen mode */
+body.fullscreen-mode .chat-container {
+    overflow: hidden;
+}
+
+body.fullscreen-mode .chat-display {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
 .chat-container {
     flex: 1;
     display: flex;
@@ -234,11 +331,28 @@ header h1 {
 .chat-display {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px;
     background: #f8f9fa;
     display: flex;
     flex-direction: column;
     gap: 15px;
+    scroll-behavior: smooth;
+}
+
+/* Full-screen mode: improve chat display */
+body.fullscreen-mode .chat-display {
+    padding: 40px 20px;
+    background: #ffffff;
+}
+
+/* Center messages with max-width for readability (ChatGPT-style) */
+body.fullscreen-mode .chat-display {
+    max-width: 768px;
+    margin: 0 auto;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
 }
 
 .chat-display::-webkit-scrollbar {
@@ -288,7 +402,38 @@ header h1 {
     padding: 12px 18px;
     border-radius: 18px;
     word-wrap: break-word;
-    line-height: 1.5;
+    word-break: break-word;
+    line-height: 1.6;
+    font-size: 16px;
+    white-space: pre-wrap;
+}
+
+/* Full-screen mode: improve message layout */
+body.fullscreen-mode .message-content {
+    max-width: 100%;
+    padding: 16px 20px;
+    line-height: 1.75;
+    font-size: 16px;
+}
+
+body.fullscreen-mode .user-message {
+    justify-content: flex-start;
+}
+
+body.fullscreen-mode .user-message .message-content {
+    max-width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+body.fullscreen-mode .bot-message {
+    justify-content: flex-start;
+}
+
+body.fullscreen-mode .bot-message .message-content {
+    max-width: 100%;
+    background: #f5f5f5;
+    border: none;
+    box-shadow: none;
 }
 
 .user-message .message-content {
@@ -430,6 +575,20 @@ header h1 {
     background: white;
     border-top: 1px solid #e0e0e0;
     gap: 10px;
+    align-items: flex-end;
+}
+
+/* Full-screen mode: fixed input at bottom */
+body.fullscreen-mode .input-container {
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    padding: 16px 24px;
+    max-width: 768px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 #userInput {
@@ -439,16 +598,33 @@ header h1 {
     border-radius: 25px;
     font-size: 16px;
     outline: none;
-    transition: border-color 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    font-family: inherit;
+    resize: none;
+    min-height: 24px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+/* Full-screen mode: textarea styling */
+body.fullscreen-mode #userInput {
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-height: 48px;
+    max-height: 300px;
+    line-height: 1.6;
 }
 
 #userInput:focus {
     border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 #userInput:disabled {
     background: #f5f5f5;
     cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .send-button {
@@ -550,6 +726,15 @@ header h1 {
     display: block;
 }
 
+/* Smooth transitions for full-screen mode */
+.app-wrapper,
+.container,
+.chat-container,
+header,
+.status {
+    transition: all 0.3s ease;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .sidebar {
@@ -559,6 +744,33 @@ header h1 {
 
     .container {
         width: 100%;
+    }
+    
+    /* Full-screen mode on mobile */
+    body.fullscreen-mode .chat-display {
+        padding: 20px 16px;
+    }
+    
+    body.fullscreen-mode .input-container {
+        padding: 12px 16px;
+    }
+    
+    body.fullscreen-mode .message-content {
+        padding: 14px 18px;
+        font-size: 15px;
+    }
+    
+    /* Adjust header buttons on mobile */
+    .header-buttons {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .fullscreen-button,
+    .show-sidebar-button,
+    .clear-button {
+        padding: 8px 16px;
+        font-size: 12px;
     }
 }
 
@@ -600,6 +812,20 @@ header h1 {
 
     .mode-select {
         max-width: 100%;
+    }
+    
+    /* Mobile full-screen adjustments */
+    body.fullscreen-mode .mode-selector-container {
+        padding: 8px 16px;
+    }
+    
+    body.fullscreen-mode .chat-display {
+        padding: 16px;
+    }
+    
+    /* Improve mobile keyboard handling */
+    body.fullscreen-mode .input-container {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
 }
 

@@ -18,12 +18,16 @@ const showSidebarButton = document.getElementById('showSidebarButton');
 const closeSidebarButton = document.getElementById('closeSidebarButton');
 const sidebar = document.getElementById('sidebar');
 const modeSelect = document.getElementById('modeSelect');
+const fullScreenButton = document.getElementById('fullScreenButton');
 
 // API endpoint
 const API_URL = '/api/chat';
 
 // Current mode
 let currentMode = 'normal';
+
+// Full-screen state
+let isFullScreen = false;
 
 // Load all chats from localStorage
 function loadChats() {
@@ -347,7 +351,12 @@ function addMessage(content, isUser = false) {
 function scrollToBottom() {
     // Use requestAnimationFrame for smooth scrolling
     requestAnimationFrame(() => {
-        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        if (chatDisplay) {
+            chatDisplay.scrollTo({
+                top: chatDisplay.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
     });
 }
 
@@ -410,6 +419,44 @@ function clearChat() {
     }
 }
 
+// Auto-resize textarea based on content
+function autoResizeTextarea() {
+    if (userInput && userInput.tagName === 'TEXTAREA') {
+        userInput.style.height = 'auto';
+        const scrollHeight = userInput.scrollHeight;
+        const maxHeight = isFullScreen ? 300 : 200;
+        userInput.style.height = Math.min(scrollHeight, maxHeight) + 'px';
+    }
+}
+
+// Toggle full-screen mode
+function toggleFullScreen() {
+    isFullScreen = !isFullScreen;
+    document.body.classList.toggle('fullscreen-mode', isFullScreen);
+    
+    if (fullScreenButton) {
+        if (isFullScreen) {
+            fullScreenButton.textContent = '⛶ Exit Full Screen';
+            fullScreenButton.title = 'Exit full screen';
+        } else {
+            fullScreenButton.textContent = '⛶ Full Screen';
+            fullScreenButton.title = 'Toggle full screen';
+        }
+        fullScreenButton.classList.toggle('fullscreen-active', isFullScreen);
+    }
+    
+    // Close sidebar if open in full-screen mode
+    if (isFullScreen) {
+        hideSidebar();
+    }
+    
+    // Adjust textarea after mode change
+    setTimeout(() => {
+        autoResizeTextarea();
+        scrollToBottom();
+    }, 100);
+}
+
 // Send message to API
 async function sendMessage() {
     const message = userInput.value.trim();
@@ -430,6 +477,7 @@ async function sendMessage() {
     // Add user message to chat
     addMessage(message, true);
     userInput.value = '';
+    autoResizeTextarea(); // Reset textarea height
     
     // Show typing indicator
     showTypingIndicator();
@@ -475,6 +523,7 @@ async function sendMessage() {
         userInput.disabled = false;
         sendButton.disabled = false;
         userInput.focus();
+        autoResizeTextarea(); // Reset textarea height
         updateStatus('Ready');
     }
 }
@@ -482,10 +531,32 @@ async function sendMessage() {
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
 
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+// Handle textarea input events
+if (userInput && userInput.tagName === 'TEXTAREA') {
+    // Auto-resize on input
+    userInput.addEventListener('input', autoResizeTextarea);
+    
+    // Handle Enter and Shift+Enter
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Initialize textarea height
+    autoResizeTextarea();
+}
+
+// Full-screen button event listener
+if (fullScreenButton) {
+    fullScreenButton.addEventListener('click', toggleFullScreen);
+}
+
+// Handle ESC key to exit full-screen
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFullScreen) {
+        toggleFullScreen();
     }
 });
 
