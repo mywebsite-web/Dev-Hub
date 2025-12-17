@@ -2,6 +2,10 @@
 
 You're getting: "Sorry, I encountered an error generating the image. Image generation failed"
 
+## Recent Update (410 Error)
+
+If you see **"410 (Gone)"** error, this means Hugging Face has deprecated the old API endpoint. The code has been updated to use `https://router.huggingface.co` instead of the old endpoint.
+
 ## Quick Diagnostic Steps
 
 ### 1. Check Server Console Logs

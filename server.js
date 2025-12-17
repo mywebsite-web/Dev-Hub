@@ -31,7 +31,8 @@ const CODE_MODELS = {
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
 // Image generation API configuration
-const HF_INFERENCE_API_URL = 'https://api-inference.huggingface.co/models';
+// Using Router API for image generation (old api-inference.huggingface.co is deprecated)
+const HF_INFERENCE_API_URL = 'https://router.huggingface.co';
 const IMAGE_MODEL = process.env.IMAGE_MODEL || 'stabilityai/stable-diffusion-xl-base-1.0';
 
 // Developer mode configuration
@@ -662,8 +663,9 @@ app.post('/api/generate-image', async (req, res) => {
       });
     }
 
-    // Call Hugging Face Inference API for image generation
-    const imageApiUrl = `${HF_INFERENCE_API_URL}/${IMAGE_MODEL}`;
+    // Call Hugging Face Router API for image generation
+    // Using the router endpoint format: /models/{model_id}
+    const imageApiUrl = `${HF_INFERENCE_API_URL}/models/${IMAGE_MODEL}`;
     
     try {
       const hfResponse = await axios.post(
@@ -786,7 +788,13 @@ app.post('/api/generate-image', async (req, res) => {
       
       if (statusCode === 404) {
         return res.status(404).json({ 
-          error: `Model "${IMAGE_MODEL}" not found. Please check the IMAGE_MODEL setting in your .env file.` 
+          error: `Model "${IMAGE_MODEL}" not found. The router API might not support this model, or the model path is incorrect. Try a different model or check the IMAGE_MODEL setting in your .env file.` 
+        });
+      }
+      
+      if (statusCode === 410) {
+        return res.status(410).json({ 
+          error: 'The API endpoint has been deprecated. Please update to the latest version. Using router API now.' 
         });
       }
       
@@ -874,7 +882,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🖼️  Image Generation: ${HF_API_TOKEN ? 'Configured' : 'Not configured'}`);
   if (HF_API_TOKEN) {
     console.log(`   • Model: ${IMAGE_MODEL}`);
-    console.log(`   • API Endpoint: ${HF_INFERENCE_API_URL}/${IMAGE_MODEL}`);
+    console.log(`   • API Endpoint: ${HF_INFERENCE_API_URL}/models/${IMAGE_MODEL}`);
     console.log(`   • Token: ${HF_API_TOKEN.substring(0, 10)}...${HF_API_TOKEN.substring(HF_API_TOKEN.length - 4)}`);
   } else {
     console.log(`   • Set HUGGINGFACE_API_TOKEN to enable image generation`);
