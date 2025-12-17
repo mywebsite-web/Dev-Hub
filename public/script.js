@@ -565,8 +565,27 @@ async function generateImage(prompt) {
             throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
         }
         
-        // Get image blob
+        // Check if response is actually an image
+        const contentType = response.headers.get('content-type') || '';
+        
+        // Get blob
         const blob = await response.blob();
+        
+        // Check if blob is actually an image (not JSON error)
+        if (!contentType.startsWith('image/') && blob.type && !blob.type.startsWith('image/')) {
+            // Might be a JSON error - try to read as text
+            const text = await blob.text();
+            try {
+                const errorData = JSON.parse(text);
+                throw new Error(errorData.error || errorData.message || 'Image generation failed');
+            } catch (parseError) {
+                // If not JSON, check if blob is empty or invalid
+                if (blob.size === 0) {
+                    throw new Error('Received empty response from server');
+                }
+                throw new Error('Server returned invalid image data');
+            }
+        }
         
         // Create object URL for display
         const imageUrl = URL.createObjectURL(blob);

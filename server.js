@@ -685,68 +685,143 @@ app.post('/api/generate-image', async (req, res) => {
         }
       );
 
-      // Check if response is an image (starts with image markers) or error JSON
-      const contentType = hfResponse.headers['content-type'];
+      // Check if response is an image or error JSON
+      const contentType = hfResponse.headers['content-type'] || '';
+      const responseData = Buffer.from(hfResponse.data);
       
-      if (contentType && contentType.startsWith('application/json')) {
-        // Error response
-        const errorData = JSON.parse(Buffer.from(hfResponse.data).toString());
-        
-        if (errorData.error && errorData.error.includes('loading')) {
-          return res.status(503).json({ 
-            error: 'The model is currently loading. Please wait a moment and try again!' 
+      // Check if response is JSON (error) by examining content type or first bytes
+      if (contentType.includes('application/json') || 
+          (responseData.length > 0 && responseData[0] === 0x7B)) { // '{' character
+        // Error response - try to parse as JSON
+        try {
+          const errorData = JSON.parse(responseData.toString());
+          console.error('HF API Error Response:', errorData);
+          
+          if (errorData.error) {
+            if (errorData.error.includes('loading') || errorData.error.includes('model is currently loading')) {
+              return res.status(503).json({ 
+                error: 'The model is currently loading. Please wait 30-60 seconds and try again!' 
+              });
+            }
+            return res.status(500).json({ 
+              error: errorData.error 
+            });
+          }
+          
+          return res.status(500).json({ 
+            error: errorData.message || 'Image generation failed' 
+          });
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          return res.status(500).json({ 
+            error: 'Invalid response from image generation API' 
           });
         }
-        
+      }
+
+      // Success: verify it's actually an image by checking PNG header
+      if (responseData.length < 8) {
         return res.status(500).json({ 
-          error: errorData.error || 'Image generation failed' 
+          error: 'Received invalid image data from API' 
         });
+      }
+      
+      // Check PNG signature (first 8 bytes: 89 50 4E 47 0D 0A 1A 0A)
+      const isPNG = responseData[0] === 0x89 && 
+                    responseData[1] === 0x50 && 
+                    responseData[2] === 0x4E && 
+                    responseData[3] === 0x47;
+      
+      if (!isPNG) {
+        // Might be JPEG or other format, or could be an error
+        // Try to check if it starts with error indicators
+        const dataString = responseData.toString('utf8', 0, Math.min(100, responseData.length));
+        if (dataString.trim().startsWith('{') || dataString.includes('error')) {
+          try {
+            const errorData = JSON.parse(responseData.toString());
+            return res.status(500).json({ 
+              error: errorData.error || errorData.message || 'Image generation failed' 
+            });
+          } catch (e) {
+            // Not JSON, might be JPEG or other format
+          }
+        }
       }
 
       // Success: send image as binary
-      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Type', contentType || 'image/png');
       res.setHeader('Content-Disposition', `inline; filename="generated-${Date.now()}.png"`);
-      res.send(Buffer.from(hfResponse.data));
+      res.send(responseData);
 
     } catch (hfError) {
-      console.error('Hugging Face Image API Error:', hfError.response?.status, hfError.message);
+      const statusCode = hfError.response?.status;
+      const errorMessage = hfError.message;
+      
+      console.error('Hugging Face Image API Error:');
+      console.error('  Status:', statusCode);
+      console.error('  Message:', errorMessage);
+      console.error('  Response:', hfError.response?.data ? 
+        (typeof hfError.response.data === 'string' ? 
+          hfError.response.data.substring(0, 200) : 
+          JSON.stringify(hfError.response.data).substring(0, 200)) : 'No response data');
       
       // Handle specific error cases
-      if (hfError.response?.status === 503) {
+      if (statusCode === 503) {
         return res.status(503).json({ 
-          error: 'The model is currently loading. Please wait a moment and try again!' 
+          error: 'The model is currently loading. Please wait 30-60 seconds and try again!' 
         });
       }
       
-      if (hfError.response?.status === 429) {
+      if (statusCode === 429) {
         return res.status(429).json({ 
-          error: 'Too many requests. Please wait a moment and try again!' 
+          error: 'Too many requests. Please wait a few minutes and try again!' 
         });
       }
       
-      if (hfError.response?.status === 401 || hfError.response?.status === 403) {
+      if (statusCode === 401 || statusCode === 403) {
         return res.status(401).json({ 
-          error: 'API authentication failed. Please check your Hugging Face API token.' 
+          error: 'API authentication failed. Please check your Hugging Face API token in the .env file.' 
+        });
+      }
+      
+      if (statusCode === 404) {
+        return res.status(404).json({ 
+          error: `Model "${IMAGE_MODEL}" not found. Please check the IMAGE_MODEL setting in your .env file.` 
         });
       }
       
       // Try to parse error response
       if (hfError.response?.data) {
         try {
-          const errorData = typeof hfError.response.data === 'string' 
-            ? JSON.parse(hfError.response.data)
-            : hfError.response.data;
+          let errorData;
+          if (typeof hfError.response.data === 'string') {
+            errorData = JSON.parse(hfError.response.data);
+          } else if (Buffer.isBuffer(hfError.response.data)) {
+            errorData = JSON.parse(hfError.response.data.toString());
+          } else {
+            errorData = hfError.response.data;
+          }
           
-          return res.status(hfError.response.status || 500).json({ 
-            error: errorData.error || errorData.message || 'Image generation failed' 
+          const errorMsg = errorData.error || errorData.message || errorData.details || 'Image generation failed';
+          return res.status(statusCode || 500).json({ 
+            error: errorMsg 
           });
         } catch (parseError) {
-          // If can't parse, send generic error
+          // If can't parse, continue to generic error
+          console.error('Could not parse error response:', parseError);
         }
       }
       
+      // Network/timeout errors
+      if (hfError.code === 'ECONNABORTED' || errorMessage.includes('timeout')) {
+        return res.status(504).json({ 
+          error: 'Request timed out. The image generation is taking too long. Please try with a simpler prompt.' 
+        });
+      }
+      
+      // Generic error with more context
       return res.status(500).json({ 
-        error: 'Failed to generate image. Please try again.' 
+        error: `Failed to generate image${statusCode ? ` (HTTP ${statusCode})` : ''}. ${errorMessage || 'Please check your API token and try again.'}` 
       });
     }
 
@@ -799,8 +874,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🖼️  Image Generation: ${HF_API_TOKEN ? 'Configured' : 'Not configured'}`);
   if (HF_API_TOKEN) {
     console.log(`   • Model: ${IMAGE_MODEL}`);
+    console.log(`   • API Endpoint: ${HF_INFERENCE_API_URL}/${IMAGE_MODEL}`);
+    console.log(`   • Token: ${HF_API_TOKEN.substring(0, 10)}...${HF_API_TOKEN.substring(HF_API_TOKEN.length - 4)}`);
   } else {
     console.log(`   • Set HUGGINGFACE_API_TOKEN to enable image generation`);
+    console.log(`   • Get token at: https://huggingface.co/settings/tokens`);
   }
 });
+
 
