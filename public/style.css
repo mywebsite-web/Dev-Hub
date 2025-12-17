@@ -285,6 +285,36 @@ body.fullscreen-mode .sidebar-overlay {
     display: none !important;
 }
 
+/* Exit full-screen button (visible only in full-screen mode) */
+.exit-fullscreen-button {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #667eea;
+    border: 2px solid #667eea;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.exit-fullscreen-button:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.exit-fullscreen-button:active {
+    transform: translateY(0);
+}
+
 /* Full-screen mode: adjust container */
 body.fullscreen-mode .container {
     height: 100vh;
@@ -528,6 +558,82 @@ body.fullscreen-mode .bot-message .message-content {
 .message-content pre code.language-react,
 .message-content pre code.language-jsx {
     color: #d4d4d4;
+}
+
+/* Image message styling */
+.image-message {
+    margin-bottom: 20px;
+}
+
+.generated-image-container {
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f5f5f5;
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.generated-image-container.loaded {
+    background: transparent;
+}
+
+.generated-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.3s ease;
+}
+
+.generated-image-container:not(.loaded) .generated-image {
+    opacity: 0;
+}
+
+.generated-image-container.loaded .generated-image {
+    opacity: 1;
+}
+
+.image-error {
+    padding: 20px;
+    color: #e74c3c;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* Full-screen mode: image styling */
+body.fullscreen-mode .generated-image-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+body.fullscreen-mode .generated-image {
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+}
+
+/* Responsive image sizing */
+@media (max-width: 768px) {
+    .generated-image-container {
+        min-height: 150px;
+    }
+    
+    .generated-image {
+        border-radius: 8px;
+    }
+    
+    .exit-fullscreen-button {
+        top: 12px;
+        right: 12px;
+        padding: 8px 16px;
+        font-size: 12px;
+    }
 }
 
 .mode-selector-container {

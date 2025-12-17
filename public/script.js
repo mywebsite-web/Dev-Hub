@@ -19,9 +19,11 @@ const closeSidebarButton = document.getElementById('closeSidebarButton');
 const sidebar = document.getElementById('sidebar');
 const modeSelect = document.getElementById('modeSelect');
 const fullScreenButton = document.getElementById('fullScreenButton');
+const exitFullScreenButton = document.getElementById('exitFullScreenButton');
 
 // API endpoint
 const API_URL = '/api/chat';
+const IMAGE_API_URL = '/api/generate-image';
 
 // Current mode
 let currentMode = 'normal';
@@ -106,7 +108,12 @@ function loadCurrentChat() {
     
     const chat = chats[currentChatId];
     chat.messages.forEach(msg => {
-        addMessageToDisplay(msg.content, msg.isUser, false);
+        if (msg.isImage && msg.imageUrl) {
+            // Restore image messages
+            displayImage(msg.content.replace(/\[Image Generated: (.+)\]/, '$1'), msg.imageUrl);
+        } else {
+            addMessageToDisplay(msg.content, msg.isUser, false);
+        }
     });
     
     setTimeout(() => {
@@ -224,7 +231,8 @@ function updatePlaceholderForMode() {
         write: 'Describe the code you want me to write...',
         debug: 'Paste your code and error message...',
         explain: 'Paste the code you want explained...',
-        refactor: 'Paste the code you want refactored...'
+        refactor: 'Paste the code you want refactored...',
+        image: 'Describe the image you want to generate...'
     };
     const mode = modeSelect.value || 'normal';
     userInput.placeholder = placeholders[mode] || placeholders.normal;
@@ -434,15 +442,15 @@ function toggleFullScreen() {
     isFullScreen = !isFullScreen;
     document.body.classList.toggle('fullscreen-mode', isFullScreen);
     
+    // Show/hide full-screen button in header
     if (fullScreenButton) {
-        if (isFullScreen) {
-            fullScreenButton.textContent = '⛶ Exit Full Screen';
-            fullScreenButton.title = 'Exit full screen';
-        } else {
-            fullScreenButton.textContent = '⛶ Full Screen';
-            fullScreenButton.title = 'Toggle full screen';
-        }
+        fullScreenButton.style.display = isFullScreen ? 'none' : 'block';
         fullScreenButton.classList.toggle('fullscreen-active', isFullScreen);
+    }
+    
+    // Show/hide exit button in full-screen mode
+    if (exitFullScreenButton) {
+        exitFullScreenButton.style.display = isFullScreen ? 'block' : 'none';
     }
     
     // Close sidebar if open in full-screen mode
@@ -457,7 +465,7 @@ function toggleFullScreen() {
     }, 100);
 }
 
-// Send message to API
+// Send message to API (handles both chat and image generation)
 async function sendMessage() {
     const message = userInput.value.trim();
     
@@ -470,6 +478,10 @@ async function sendMessage() {
         createNewChat();
     }
     
+    // Get current mode
+    const selectedMode = modeSelect ? modeSelect.value : 'normal';
+    currentMode = selectedMode;
+    
     // Disable input while processing
     userInput.disabled = true;
     sendButton.disabled = true;
@@ -479,15 +491,17 @@ async function sendMessage() {
     userInput.value = '';
     autoResizeTextarea(); // Reset textarea height
     
-    // Show typing indicator
+    // Handle image generation mode
+    if (selectedMode === 'image') {
+        await generateImage(message);
+        return;
+    }
+    
+    // Handle regular chat modes
     showTypingIndicator();
     updateStatus('Dev GPT is thinking...', 'typing');
     
     try {
-        // Get current mode
-        const selectedMode = modeSelect ? modeSelect.value : 'normal';
-        currentMode = selectedMode;
-        
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -528,6 +542,127 @@ async function sendMessage() {
     }
 }
 
+// Generate image using Hugging Face API
+async function generateImage(prompt) {
+    // Show loading indicator
+    showTypingIndicator();
+    updateStatus('Generating image...', 'typing');
+    
+    try {
+        const response = await fetch(IMAGE_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                conversationId: currentChatId || 'default'
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        // Get image blob
+        const blob = await response.blob();
+        
+        // Create object URL for display
+        const imageUrl = URL.createObjectURL(blob);
+        
+        // Remove typing indicator
+        removeTypingIndicator();
+        
+        // Display image
+        displayImage(prompt, imageUrl);
+        updateStatus('Image generated successfully!', 'typing');
+        
+        setTimeout(() => {
+            updateStatus('Ready');
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Image generation error:', error);
+        removeTypingIndicator();
+        
+        let errorMessage = 'Sorry, I encountered an error generating the image. ';
+        if (error.message.includes('503')) {
+            errorMessage += 'The model is loading. Please wait a moment and try again!';
+        } else if (error.message.includes('429')) {
+            errorMessage += 'Too many requests. Please wait a moment and try again!';
+        } else if (error.message.includes('401') || error.message.includes('403')) {
+            errorMessage += 'API authentication failed. Please check your configuration.';
+        } else {
+            errorMessage += error.message || 'Please try again!';
+        }
+        
+        addMessage(errorMessage, false);
+        updateStatus('Error occurred', 'error');
+        
+        setTimeout(() => {
+            updateStatus('Ready');
+        }, 3000);
+    } finally {
+        // Re-enable input
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        userInput.focus();
+        autoResizeTextarea();
+    }
+}
+
+// Display generated image in chat
+function displayImage(prompt, imageUrl) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot-message image-message';
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    // Create image container
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'generated-image-container';
+    
+    const imageElement = document.createElement('img');
+    imageElement.src = imageUrl;
+    imageElement.alt = prompt;
+    imageElement.className = 'generated-image';
+    imageElement.loading = 'lazy';
+    
+    // Add loading placeholder
+    imageElement.onload = () => {
+        imageContainer.classList.add('loaded');
+    };
+    
+    // Add error handling
+    imageElement.onerror = () => {
+        imageContainer.innerHTML = '<p class="image-error">Failed to load image</p>';
+    };
+    
+    imageContainer.appendChild(imageElement);
+    
+    messageContent.appendChild(imageContainer);
+    messageDiv.appendChild(messageContent);
+    chatDisplay.appendChild(messageDiv);
+    
+    // Save to chat history
+    if (currentChatId && chats[currentChatId]) {
+        chats[currentChatId].messages.push({
+            content: `[Image Generated: ${prompt}]`,
+            imageUrl: imageUrl,
+            isUser: false,
+            isImage: true,
+            timestamp: Date.now()
+        });
+        chats[currentChatId].updatedAt = Date.now();
+        saveChats();
+    }
+    
+    // Scroll to bottom
+    scrollToBottom();
+}
+
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
 
@@ -548,9 +683,13 @@ if (userInput && userInput.tagName === 'TEXTAREA') {
     autoResizeTextarea();
 }
 
-// Full-screen button event listener
+// Full-screen button event listeners
 if (fullScreenButton) {
     fullScreenButton.addEventListener('click', toggleFullScreen);
+}
+
+if (exitFullScreenButton) {
+    exitFullScreenButton.addEventListener('click', toggleFullScreen);
 }
 
 // Handle ESC key to exit full-screen

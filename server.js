@@ -30,6 +30,10 @@ const CODE_MODELS = {
 };
 const HF_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN || '';
 
+// Image generation API configuration
+const HF_INFERENCE_API_URL = 'https://api-inference.huggingface.co/models';
+const IMAGE_MODEL = process.env.IMAGE_MODEL || 'stabilityai/stable-diffusion-xl-base-1.0';
+
 // Developer mode configuration
 const DEV_SECRET_KEY = process.env.DEV_SECRET_KEY || 'dev_gpt_2024_secure_key';
 const DEV_COMMAND_PREFIX = '/dev';
@@ -643,6 +647,118 @@ app.get('/api/dev/social-media/logs', (req, res) => {
   });
 });
 
+// Image generation endpoint
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const { prompt, conversationId } = req.body;
+
+    if (!prompt || prompt.trim() === '') {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    if (!HF_API_TOKEN) {
+      return res.status(500).json({ 
+        error: 'Image generation is not configured. Please set HUGGINGFACE_API_TOKEN in environment variables.' 
+      });
+    }
+
+    // Call Hugging Face Inference API for image generation
+    const imageApiUrl = `${HF_INFERENCE_API_URL}/${IMAGE_MODEL}`;
+    
+    try {
+      const hfResponse = await axios.post(
+        imageApiUrl,
+        {
+          inputs: prompt.trim(),
+          parameters: {
+            num_inference_steps: 20,
+            guidance_scale: 7.5
+          }
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${HF_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          responseType: 'arraybuffer', // Important: get binary data
+          timeout: 120000 // 2 minutes timeout for image generation
+        }
+      );
+
+      // Check if response is an image (starts with image markers) or error JSON
+      const contentType = hfResponse.headers['content-type'];
+      
+      if (contentType && contentType.startsWith('application/json')) {
+        // Error response
+        const errorData = JSON.parse(Buffer.from(hfResponse.data).toString());
+        
+        if (errorData.error && errorData.error.includes('loading')) {
+          return res.status(503).json({ 
+            error: 'The model is currently loading. Please wait a moment and try again!' 
+          });
+        }
+        
+        return res.status(500).json({ 
+          error: errorData.error || 'Image generation failed' 
+        });
+      }
+
+      // Success: send image as binary
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', `inline; filename="generated-${Date.now()}.png"`);
+      res.send(Buffer.from(hfResponse.data));
+
+    } catch (hfError) {
+      console.error('Hugging Face Image API Error:', hfError.response?.status, hfError.message);
+      
+      // Handle specific error cases
+      if (hfError.response?.status === 503) {
+        return res.status(503).json({ 
+          error: 'The model is currently loading. Please wait a moment and try again!' 
+        });
+      }
+      
+      if (hfError.response?.status === 429) {
+        return res.status(429).json({ 
+          error: 'Too many requests. Please wait a moment and try again!' 
+        });
+      }
+      
+      if (hfError.response?.status === 401 || hfError.response?.status === 403) {
+        return res.status(401).json({ 
+          error: 'API authentication failed. Please check your Hugging Face API token.' 
+        });
+      }
+      
+      // Try to parse error response
+      if (hfError.response?.data) {
+        try {
+          const errorData = typeof hfError.response.data === 'string' 
+            ? JSON.parse(hfError.response.data)
+            : hfError.response.data;
+          
+          return res.status(hfError.response.status || 500).json({ 
+            error: errorData.error || errorData.message || 'Image generation failed' 
+          });
+        } catch (parseError) {
+          // If can't parse, send generic error
+        }
+      }
+      
+      return res.status(500).json({ 
+        error: 'Failed to generate image. Please try again.' 
+      });
+    }
+
+  } catch (error) {
+    console.error('Server Error:', error);
+    res.status(500).json({ 
+      error: 'An error occurred while processing your request',
+      message: 'Please try again later'
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Dev GPT server is running on port ${PORT}`);
@@ -678,5 +794,13 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   • LinkedIn: ${process.env.LINKEDIN_ACCESS_TOKEN ? 'Configured' : 'Not configured'}`);
   console.log(`   • Reddit: ${process.env.REDDIT_CLIENT_ID ? 'Configured' : 'Not configured'}`);
   console.log(`   • Facebook: ${process.env.FACEBOOK_ACCESS_TOKEN ? 'Configured' : 'Not configured'}`);
+  
+  // Image generation status
+  console.log(`\n🖼️  Image Generation: ${HF_API_TOKEN ? 'Configured' : 'Not configured'}`);
+  if (HF_API_TOKEN) {
+    console.log(`   • Model: ${IMAGE_MODEL}`);
+  } else {
+    console.log(`   • Set HUGGINGFACE_API_TOKEN to enable image generation`);
+  }
 });
 

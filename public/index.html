@@ -46,6 +46,11 @@
             </header>
 
             <div class="chat-container">
+                <!-- Full-screen exit button (visible only in full-screen mode) -->
+                <button id="exitFullScreenButton" class="exit-fullscreen-button" title="Exit full screen" style="display: none;">
+                    ✕ Exit Full Screen
+                </button>
+                
                 <div id="chatDisplay" class="chat-display">
                     <!-- Chat history will be loaded from localStorage or welcome message will be displayed -->
                 </div>
@@ -58,6 +63,7 @@
                         <option value="debug">🐛 Debug Code</option>
                         <option value="explain">📖 Explain Code</option>
                         <option value="refactor">✨ Refactor Code</option>
+                        <option value="image">🖼️ Image Generation</option>
                     </select>
                 </div>
                 <div class="input-container">
